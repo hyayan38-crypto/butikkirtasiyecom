@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("customer") // "customer" | "admin"
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders    Order[]
+  addresses Address[]
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  image    String?
+  products Product[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  price       Float
+  salePrice   Float?
+  stock       Int      @default(0)
+  images      String   @default("[]") // JSON array
+  featured    Boolean  @default(false)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  categoryId String
+  category   Category    @relation(fields: [categoryId], references: [id])
+  orderItems OrderItem[]
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  orderNumber   String      @unique
+  status        String      @default("pending") // pending | processing | shipped | delivered | cancelled
+  total         Float
+  shippingCost  Float       @default(0)
+  paymentStatus String      @default("pending") // pending | paid | failed
+  paymentMethod String?
+  iyzicoToken   String?
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  userId String
+  user   User        @relation(fields: [userId], references: [id])
+  items  OrderItem[]
+  address OrderAddress?
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  quantity  Int
+  price     Float
+
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model OrderAddress {
+  id       String @id @default(cuid())
+  name     String
+  phone    String
+  city     String
+  district String
+  address  String
+
+  orderId  String @unique
+  order    Order  @relation(fields: [orderId], references: [id])
+}
+
+model Address {
+  id       String  @id @default(cuid())
+  title    String
+  name     String
+  phone    String
+  city     String
+  district String
+  address  String
+  isDefault Boolean @default(false)
+
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+}
