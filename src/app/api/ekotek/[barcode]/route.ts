@@ -31,7 +31,7 @@ export async function GET(
       ) ?? list[0];
 
     const name =
-      item.name ?? item.ad ?? item.NAME ?? item.urunAdi ?? item.urun_adi ?? "";
+      item.URUNADI ?? item.name ?? item.ad ?? item.NAME ?? item.urunAdi ?? item.urun_adi ?? "";
     const price =
       item.SATIS_FIYATI ?? item.fiyat ?? item.price ?? item.FIYAT ?? item.satisFiyati ?? 0;
     const stock =
