@@ -33,7 +33,7 @@ export async function GET(
     const name =
       item.name ?? item.ad ?? item.NAME ?? item.urunAdi ?? item.urun_adi ?? "";
     const price =
-      item.fiyat ?? item.price ?? item.FIYAT ?? item.satisFiyati ?? 0;
+      item.SATIS_FIYATI ?? item.fiyat ?? item.price ?? item.FIYAT ?? item.satisFiyati ?? 0;
     const stock =
       item.stok ?? item.stock ?? item.STOK ?? item.miktar ?? 0;
     const birim =
