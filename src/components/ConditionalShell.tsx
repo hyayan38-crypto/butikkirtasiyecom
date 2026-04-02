@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 
-const KIOSK_ROUTES = ["/fiyat-gor"];
+const KIOSK_ROUTES = ["/fiyat-gor", "/"];
 
 export default function ConditionalShell({
   children,
