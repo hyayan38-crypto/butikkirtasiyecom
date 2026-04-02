@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
-import { ShoppingCart, User, Menu, X, Search, BookOpen } from "lucide-react";
+import { ShoppingCart, User, Menu, X, Search, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
 
@@ -14,148 +15,214 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const categories = [
-    { name: "Kalem & Defter", slug: "kalem-defter" },
-    { name: "Boya & Sanat", slug: "boya-sanat" },
-    { name: "Okul Çantası", slug: "okul-cantasi" },
-    { name: "Oyuncak", slug: "oyuncak" },
-    { name: "Ofis", slug: "ofis" },
-    { name: "Kampanya", slug: "kampanya" },
+    { name: "Kalem & Defter", slug: "kalem-defter", emoji: "🖊️" },
+    { name: "Boya & Sanat", slug: "boya-sanat", emoji: "🎨" },
+    { name: "Okul Çantası", slug: "okul-cantasi", emoji: "🎒" },
+    { name: "Oyuncak", slug: "oyuncak", emoji: "🧸" },
+    { name: "Ofis", slug: "ofis", emoji: "📎" },
+    { name: "Kampanya", slug: "kampanya", emoji: "🏷️" },
   ];
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-50">
+    <header className="sticky top-0 z-50">
       {/* Top bar */}
-      <div className="bg-pink-600 text-white text-xs text-center py-1.5 px-4">
-        Kargo bedava! 500₺ ve üzeri siparişlerde ücretsiz kargo 🎉
+      <div className="bg-[#F5A623] text-[#1C1C1E] text-xs text-center py-2 px-4 font-semibold">
+        🎉 500₺ ve üzeri siparişlerde ücretsiz kargo!
       </div>
 
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between h-16 gap-4">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <BookOpen className="w-7 h-7 text-pink-600" />
-            <span className="font-bold text-xl text-gray-800">
-              Butiik <span className="text-pink-600">Kırtasiye</span>
-            </span>
-          </Link>
+      {/* Main bar */}
+      <div className="bg-[#1C1C1E] shadow-lg">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between h-14 gap-3">
 
-          {/* Desktop nav */}
-          <nav className="hidden lg:flex items-center gap-6">
-            {categories.map((cat) => (
-              <Link
-                key={cat.slug}
-                href={`/kategori/${cat.slug}`}
-                className="text-sm text-gray-600 hover:text-pink-600 transition-colors"
-              >
-                {cat.name}
-              </Link>
-            ))}
-          </nav>
-
-          {/* Right icons */}
-          <div className="flex items-center gap-3">
-            {/* Search */}
-            {searchOpen ? (
-              <form
-                className="flex items-center gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (searchQuery.trim())
-                    window.location.href = `/urunler?q=${encodeURIComponent(searchQuery)}`;
-                }}
-              >
-                <input
-                  autoFocus
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Ürün ara..."
-                  className="border rounded-lg px-3 py-1.5 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-pink-300"
-                />
-                <button type="button" onClick={() => setSearchOpen(false)}>
-                  <X className="w-4 h-4 text-gray-500" />
-                </button>
-              </form>
-            ) : (
-              <button onClick={() => setSearchOpen(true)}>
-                <Search className="w-5 h-5 text-gray-600 hover:text-pink-600 transition-colors" />
-              </button>
-            )}
-
-            {/* Cart */}
-            <Link href="/sepet" className="relative">
-              <ShoppingCart className="w-5 h-5 text-gray-600 hover:text-pink-600 transition-colors" />
-              {itemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-pink-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                  {itemCount > 9 ? "9+" : itemCount}
-                </span>
-              )}
+            {/* Logo */}
+            <Link href="/" className="shrink-0">
+              <Image
+                src="/logo.jpg"
+                alt="Butik Kırtasiye"
+                width={160}
+                height={40}
+                className="h-9 w-auto rounded-md"
+                priority
+              />
             </Link>
 
-            {/* User */}
-            {session ? (
-              <div className="relative group">
-                <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-pink-600">
-                  <User className="w-5 h-5" />
-                  <span className="hidden sm:block">{session.user?.name?.split(" ")[0]}</span>
-                </button>
-                <div className="absolute right-0 top-full mt-1 bg-white shadow-lg rounded-lg border w-44 py-1 hidden group-hover:block z-50">
-                  <Link href="/hesabim" className="block px-4 py-2 text-sm hover:bg-gray-50">
-                    Hesabım
-                  </Link>
-                  <Link href="/hesabim/siparisler" className="block px-4 py-2 text-sm hover:bg-gray-50">
-                    Siparişlerim
-                  </Link>
-                  {(session.user as { role?: string })?.role === "admin" && (
-                    <Link href="/admin" className="block px-4 py-2 text-sm text-pink-600 hover:bg-gray-50">
-                      Admin Panel
-                    </Link>
-                  )}
-                  <button
-                    onClick={() => signOut({ callbackUrl: "/" })}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
-                  >
-                    Çıkış Yap
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <Link
-                href="/giris"
-                className="flex items-center gap-1 text-sm text-gray-600 hover:text-pink-600"
-              >
-                <User className="w-5 h-5" />
-                <span className="hidden sm:block">Giriş</span>
-              </Link>
-            )}
+            {/* Desktop nav */}
+            <nav className="hidden lg:flex items-center gap-5 flex-1 justify-center">
+              {categories.map((cat) => (
+                <Link
+                  key={cat.slug}
+                  href={`/kategori/${cat.slug}`}
+                  className="text-sm text-gray-300 hover:text-[#F5A623] transition-colors whitespace-nowrap"
+                >
+                  {cat.name}
+                </Link>
+              ))}
+            </nav>
 
-            {/* Mobile menu button */}
-            <button
-              className="lg:hidden"
-              onClick={() => setMenuOpen(!menuOpen)}
-            >
-              {menuOpen ? (
-                <X className="w-5 h-5 text-gray-600" />
+            {/* Right icons */}
+            <div className="flex items-center gap-2">
+              {/* Search */}
+              {searchOpen ? (
+                <form
+                  className="flex items-center gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (searchQuery.trim())
+                      window.location.href = `/urunler?q=${encodeURIComponent(searchQuery)}`;
+                  }}
+                >
+                  <input
+                    autoFocus
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Ürün ara..."
+                    className="bg-[#2C2C2E] text-white border border-[#F5A623]/30 rounded-lg px-3 py-1.5 text-sm w-40 focus:outline-none focus:border-[#F5A623]"
+                  />
+                  <button type="button" onClick={() => setSearchOpen(false)}>
+                    <X className="w-4 h-4 text-gray-400" />
+                  </button>
+                </form>
               ) : (
-                <Menu className="w-5 h-5 text-gray-600" />
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  className="p-2 text-gray-300 hover:text-[#F5A623] transition-colors"
+                >
+                  <Search className="w-5 h-5" />
+                </button>
               )}
-            </button>
+
+              {/* Cart */}
+              <Link href="/sepet" className="relative p-2 text-gray-300 hover:text-[#F5A623] transition-colors">
+                <ShoppingCart className="w-5 h-5" />
+                {itemCount > 0 && (
+                  <span className="absolute top-0.5 right-0.5 bg-[#F5A623] text-[#1C1C1E] text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                    {itemCount > 9 ? "9+" : itemCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* User - desktop only */}
+              {session ? (
+                <div className="hidden lg:block relative group">
+                  <button className="flex items-center gap-1.5 text-sm text-gray-300 hover:text-[#F5A623] p-2 transition-colors">
+                    <User className="w-5 h-5" />
+                    <span>{session.user?.name?.split(" ")[0]}</span>
+                  </button>
+                  <div className="absolute right-0 top-full mt-1 bg-[#2C2C2E] border border-[#3C3C3E] shadow-xl rounded-xl w-44 py-1 hidden group-hover:block">
+                    <Link href="/hesabim" className="block px-4 py-2.5 text-sm text-gray-300 hover:text-[#F5A623] hover:bg-[#3C3C3E]">
+                      Hesabım
+                    </Link>
+                    <Link href="/hesabim/siparisler" className="block px-4 py-2.5 text-sm text-gray-300 hover:text-[#F5A623] hover:bg-[#3C3C3E]">
+                      Siparişlerim
+                    </Link>
+                    {(session.user as { role?: string })?.role === "admin" && (
+                      <Link href="/admin" className="block px-4 py-2.5 text-sm text-[#F5A623] hover:bg-[#3C3C3E]">
+                        Admin Panel
+                      </Link>
+                    )}
+                    <button
+                      onClick={() => signOut({ callbackUrl: "/" })}
+                      className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-[#3C3C3E]"
+                    >
+                      Çıkış Yap
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <Link
+                  href="/giris"
+                  className="hidden lg:flex items-center gap-1 text-sm text-gray-300 hover:text-[#F5A623] p-2 transition-colors"
+                >
+                  <User className="w-5 h-5" />
+                  <span>Giriş</span>
+                </Link>
+              )}
+
+              {/* Mobile menu button */}
+              <button
+                className="lg:hidden p-2 text-gray-300 hover:text-[#F5A623] transition-colors"
+                onClick={() => setMenuOpen(!menuOpen)}
+              >
+                {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="lg:hidden bg-white border-t px-4 pb-4">
-          {categories.map((cat) => (
-            <Link
-              key={cat.slug}
-              href={`/kategori/${cat.slug}`}
-              className="block py-2.5 text-sm text-gray-700 border-b"
-              onClick={() => setMenuOpen(false)}
-            >
-              {cat.name}
-            </Link>
-          ))}
+        <div className="lg:hidden bg-[#1C1C1E] border-t border-[#2C2C2E]">
+          {/* User section */}
+          <div className="px-4 py-3 border-b border-[#2C2C2E]">
+            {session ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-[#F5A623] flex items-center justify-center">
+                    <span className="text-[#1C1C1E] font-bold text-sm">
+                      {session.user?.name?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <span className="text-white text-sm font-medium">{session.user?.name}</span>
+                </div>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="text-xs text-red-400"
+                >
+                  Çıkış
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/giris"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center justify-between text-[#F5A623] font-medium py-1"
+              >
+                <span>Giriş Yap / Kayıt Ol</span>
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            )}
+          </div>
+
+          {/* Categories */}
+          <div className="px-4 py-2">
+            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2">Kategoriler</p>
+            {categories.map((cat) => (
+              <Link
+                key={cat.slug}
+                href={`/kategori/${cat.slug}`}
+                className="flex items-center justify-between py-3 text-gray-300 hover:text-[#F5A623] border-b border-[#2C2C2E] last:border-0"
+                onClick={() => setMenuOpen(false)}
+              >
+                <span className="flex items-center gap-3">
+                  <span className="text-lg">{cat.emoji}</span>
+                  <span className="text-sm font-medium">{cat.name}</span>
+                </span>
+                <ChevronRight className="w-4 h-4 text-gray-600" />
+              </Link>
+            ))}
+          </div>
+
+          {/* Account links for logged in users */}
+          {session && (
+            <div className="px-4 py-2 border-t border-[#2C2C2E]">
+              <Link href="/hesabim" onClick={() => setMenuOpen(false)} className="flex items-center justify-between py-3 text-gray-300">
+                <span className="text-sm">Hesabım</span>
+                <ChevronRight className="w-4 h-4 text-gray-600" />
+              </Link>
+              <Link href="/hesabim/siparisler" onClick={() => setMenuOpen(false)} className="flex items-center justify-between py-3 text-gray-300">
+                <span className="text-sm">Siparişlerim</span>
+                <ChevronRight className="w-4 h-4 text-gray-600" />
+              </Link>
+              {(session.user as { role?: string })?.role === "admin" && (
+                <Link href="/admin" onClick={() => setMenuOpen(false)} className="flex items-center justify-between py-3 text-[#F5A623]">
+                  <span className="text-sm font-medium">Admin Panel</span>
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              )}
+            </div>
+          )}
         </div>
       )}
     </header>

@@ -10,7 +10,6 @@ echo Site baslatiliyor...
 echo.
 
 cd /d "%~dp0"
-set DATABASE_URL=file:./dev.db
 
 :menu
 echo [1] Siteyi baslat (http://localhost:3000)

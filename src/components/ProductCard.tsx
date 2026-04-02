@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingCart, Heart } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { formatPrice, getProductImages } from "@/lib/utils";
 import { toast } from "@/hooks/useToast";
@@ -23,6 +23,9 @@ export default function ProductCard({ product }: { product: Product }) {
   const images = getProductImages(product.images);
   const displayPrice = product.salePrice ?? product.price;
   const hasDiscount = product.salePrice && product.salePrice < product.price;
+  const discountPct = hasDiscount
+    ? Math.round((1 - product.salePrice! / product.price) * 100)
+    : 0;
 
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault();
@@ -41,48 +44,44 @@ export default function ProductCard({ product }: { product: Product }) {
 
   return (
     <Link href={`/urun/${product.slug}`} className="group block">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+      <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 hover:border-[#F5A623]/40 hover:shadow-lg transition-all duration-200">
         {/* Image */}
-        <div className="relative aspect-square bg-gray-50 overflow-hidden">
+        <div className="relative aspect-square bg-[#F9F6F0] overflow-hidden">
           <Image
             src={images[0]}
             alt={product.name}
             fill
-            className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
+            className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
           {hasDiscount && (
-            <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-              %{Math.round((1 - product.salePrice! / product.price) * 100)} İndirim
+            <span className="absolute top-2 left-2 bg-[#F5A623] text-[#1C1C1E] text-xs font-bold px-2 py-0.5 rounded-full">
+              %{discountPct} İndirim
             </span>
           )}
           {product.stock === 0 && (
-            <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-              <span className="text-gray-500 font-medium text-sm">Stok Yok</span>
+            <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+              <span className="text-gray-500 font-semibold text-sm bg-white px-3 py-1 rounded-full border">
+                Stok Yok
+              </span>
             </div>
           )}
-          <button
-            className="absolute top-2 right-2 p-1.5 rounded-full bg-white shadow opacity-0 group-hover:opacity-100 transition-opacity hover:text-pink-600"
-            onClick={(e) => e.preventDefault()}
-          >
-            <Heart className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Info */}
         <div className="p-3">
-          <p className="text-xs text-gray-400 mb-1">{product.category.name}</p>
-          <h3 className="text-sm font-medium text-gray-800 line-clamp-2 mb-2 min-h-[2.5rem]">
+          <p className="text-xs text-gray-400 mb-1 line-clamp-1">{product.category.name}</p>
+          <h3 className="text-sm font-medium text-gray-800 line-clamp-2 mb-3 min-h-[2.5rem] leading-snug">
             {product.name}
           </h3>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="font-bold text-gray-900">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <span className="font-bold text-[#1C1C1E] text-base">
                 {formatPrice(displayPrice)}
               </span>
               {hasDiscount && (
-                <span className="text-xs text-gray-400 line-through ml-1.5">
+                <span className="text-xs text-gray-400 line-through ml-1.5 block">
                   {formatPrice(product.price)}
                 </span>
               )}
@@ -91,7 +90,7 @@ export default function ProductCard({ product }: { product: Product }) {
             <button
               onClick={handleAddToCart}
               disabled={product.stock === 0}
-              className="p-2 rounded-xl bg-pink-50 text-pink-600 hover:bg-pink-600 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="shrink-0 w-9 h-9 rounded-xl bg-[#F5A623] text-[#1C1C1E] hover:bg-[#e09520] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
             >
               <ShoppingCart className="w-4 h-4" />
             </button>

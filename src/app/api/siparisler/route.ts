@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   });
 
   let subtotal = 0;
-  const orderItems = [];
+  const orderItems: { productId: string; quantity: number; price: number }[] = [];
 
   for (const item of items) {
     const product = products.find((p) => p.id === item.id);

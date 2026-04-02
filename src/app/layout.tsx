@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import ConditionalShell from "@/components/ConditionalShell";
 import { SessionProvider } from "next-auth/react";
 
 const geist = Geist({ subsets: ["latin"] });
@@ -26,9 +25,7 @@ export default function RootLayout({
     <html lang="tr">
       <body className={`${geist.className} bg-gray-50 min-h-screen flex flex-col`}>
         <SessionProvider>
-          <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
+          <ConditionalShell>{children}</ConditionalShell>
         </SessionProvider>
       </body>
     </html>
