@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
@@ -137,7 +137,7 @@ export default function KioskPage() {
         <h1 className="text-[#F5A623] text-lg font-bold leading-snug tracking-wide uppercase">
           Butik Kırtasiye Fiyat Gör
         </h1>
-        <p className="text-white/50 text-sm mt-1">Programına Hoşgeldiniz</p>
+        <p className="text-white/50 text-sm mt-1">Hoşgeldiniz</p>
       </div>
 
       {/* İçerik */}
