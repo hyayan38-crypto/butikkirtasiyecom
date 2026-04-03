@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { BrowserMultiFormatReader } from "@zxing/browser";
-import { NotFoundException } from "@zxing/library";
 import { ScanBarcode, X, RotateCcw } from "lucide-react";
 
 type SearchResult =
@@ -14,17 +12,23 @@ type SearchResult =
 const RESET_DELAY = 7000;
 
 export default function FiyatGorSection() {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const quaggaRef = useRef<typeof import("@ericblade/quagga2")["default"] | null>(null);
+  const handledRef = useRef(false);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<SearchResult | null>(null);
 
   const stopCamera = useCallback(() => {
-    BrowserMultiFormatReader.releaseAllStreams();
+    if (quaggaRef.current) {
+      try { quaggaRef.current.stop(); } catch { /* ignore */ }
+      quaggaRef.current = null;
+    }
   }, []);
 
   const close = useCallback(() => {
     stopCamera();
+    handledRef.current = false;
     if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     setScanning(false);
     setResult(null);
@@ -32,6 +36,7 @@ export default function FiyatGorSection() {
 
   const newScan = useCallback(() => {
     stopCamera();
+    handledRef.current = false;
     if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     setResult(null);
     setScanning(true);
@@ -39,6 +44,8 @@ export default function FiyatGorSection() {
 
   const handleBarcode = useCallback(
     async (barcode: string) => {
+      if (handledRef.current) return;
+      handledRef.current = true;
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
       stopCamera();
       setScanning(false);
@@ -65,54 +72,58 @@ export default function FiyatGorSection() {
   );
 
   useEffect(() => {
-    if (!scanning) return;
+    if (!scanning || !containerRef.current) return;
 
-    let handled = false;
-    const reader = new BrowserMultiFormatReader();
+    handledRef.current = false;
+    let stopped = false;
 
-    (async () => {
-      try {
-        const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-        const backCamera =
-          devices.find((d) => /back|rear|environment/i.test(d.label)) ??
-          devices[devices.length - 1];
+    import("@ericblade/quagga2").then(({ default: Quagga }) => {
+      if (stopped || !containerRef.current) return;
+      quaggaRef.current = Quagga;
 
-        if (!videoRef.current) return;
-
-        await reader.decodeFromVideoDevice(
-          backCamera?.deviceId,
-          videoRef.current,
-          (r, err) => {
-            if (handled) return;
-            if (r) {
-              handled = true;
-              handleBarcode(r.getText());
-            } else if (err && !(err instanceof NotFoundException)) {
-              console.warn(err);
-            }
+      Quagga.init(
+        {
+          inputStream: {
+            type: "LiveStream",
+            target: containerRef.current,
+            constraints: { facingMode: "environment", width: 1280, height: 720 },
+          },
+          decoder: {
+            readers: ["ean_reader", "ean_8_reader", "code_128_reader", "upc_reader"],
+          },
+          locate: true,
+        },
+        (err: unknown) => {
+          if (err || stopped) {
+            setResult({ status: "error", message: "Kamera açılamadı. Tarayıcı kamera iznini kontrol edin." });
+            setScanning(false);
+            return;
           }
-        );
-      } catch {
-        setResult({
-          status: "error",
-          message: "Kamera açılamadı. Tarayıcı kamera iznini kontrol edin.",
-        });
-        setScanning(false);
-      }
-    })();
+          Quagga.start();
+        }
+      );
+
+      Quagga.onDetected((r: { codeResult: { code: string | null } }) => {
+        const code = r.codeResult.code;
+        if (code) handleBarcode(code);
+      });
+    });
 
     return () => {
-      handled = true;
-      BrowserMultiFormatReader.releaseAllStreams();
+      stopped = true;
+      if (quaggaRef.current) {
+        try { quaggaRef.current.stop(); } catch { /* ignore */ }
+        quaggaRef.current = null;
+      }
     };
   }, [scanning, handleBarcode]);
 
   useEffect(() => {
     return () => {
-      BrowserMultiFormatReader.releaseAllStreams();
+      stopCamera();
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
-  }, []);
+  }, [stopCamera]);
 
   const isOpen = scanning || result !== null;
 
@@ -160,11 +171,9 @@ export default function FiyatGorSection() {
             {/* Kamera görünümü */}
             {scanning && (
               <div className="relative w-full max-w-sm aspect-[4/3] rounded-2xl overflow-hidden border-2 border-[#F5A623]">
-                <video
-                  ref={videoRef}
-                  className="w-full h-full object-cover"
-                  muted
-                  playsInline
+                <div
+                  ref={containerRef}
+                  className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover [&_canvas]:hidden"
                 />
                 <div className="absolute inset-0 pointer-events-none">
                   <div className="absolute top-4 left-4 w-8 h-8 border-t-4 border-l-4 border-[#F5A623] rounded-tl-lg" />
