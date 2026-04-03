@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
-import { BrowserMultiFormatReader } from "@zxing/browser";
-import { NotFoundException } from "@zxing/library";
 import { ScanBarcode, RotateCcw } from "lucide-react";
 
 type SearchResult =
@@ -15,22 +13,23 @@ type SearchResult =
 const RESET_DELAY = 8000;
 
 export default function KioskPage() {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const quaggaRef = useRef<typeof import("@ericblade/quagga2")["default"] | null>(null);
+  const handledRef = useRef(false);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<SearchResult | null>(null);
 
   const stopCamera = useCallback(() => {
-    BrowserMultiFormatReader.releaseAllStreams();
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
+    if (quaggaRef.current) {
+      try { quaggaRef.current.stop(); } catch { /* ignore */ }
+      quaggaRef.current = null;
     }
   }, []);
 
   const reset = useCallback(() => {
     stopCamera();
+    handledRef.current = false;
     if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     setResult(null);
     setScanning(false);
@@ -38,6 +37,8 @@ export default function KioskPage() {
 
   const handleBarcode = useCallback(
     async (barcode: string) => {
+      if (handledRef.current) return;
+      handledRef.current = true;
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
       stopCamera();
       setScanning(false);
@@ -61,52 +62,48 @@ export default function KioskPage() {
   );
 
   useEffect(() => {
-    if (!scanning) return;
+    if (!scanning || !containerRef.current) return;
 
-    let handled = false;
-    const reader = new BrowserMultiFormatReader();
+    handledRef.current = false;
+    let stopped = false;
 
-    (async () => {
-      try {
-        // Otofokuslu arka kamera
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet],
+    import("@ericblade/quagga2").then(({ default: Quagga }) => {
+      if (stopped || !containerRef.current) return;
+      quaggaRef.current = Quagga;
+
+      Quagga.init(
+        {
+          inputStream: {
+            type: "LiveStream",
+            target: containerRef.current,
+            constraints: { facingMode: "environment", width: 1280, height: 720 },
           },
-        });
-
-        streamRef.current = stream;
-        if (!videoRef.current) return;
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-
-        await reader.decodeFromStream(stream, videoRef.current, (r, err) => {
-          if (handled) return;
-          if (r) {
-            handled = true;
-            handleBarcode(r.getText());
-          } else if (err && !(err instanceof NotFoundException)) {
-            console.warn(err);
+          decoder: {
+            readers: ["ean_reader", "ean_8_reader", "code_128_reader", "upc_reader"],
+          },
+          locate: true,
+        },
+        (err: unknown) => {
+          if (err || stopped) {
+            setResult({ status: "error", message: "Kamera açılamadı. Tarayıcı kamera iznini kontrol edin." });
+            setScanning(false);
+            return;
           }
-        });
-      } catch {
-        setResult({
-          status: "error",
-          message: "Kamera açılamadı. Tarayıcı kamera iznini kontrol edin.",
-        });
-        setScanning(false);
-      }
-    })();
+          Quagga.start();
+        }
+      );
+
+      Quagga.onDetected((r: { codeResult: { code: string | null } }) => {
+        const code = r.codeResult.code;
+        if (code) handleBarcode(code);
+      });
+    });
 
     return () => {
-      handled = true;
-      BrowserMultiFormatReader.releaseAllStreams();
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
+      stopped = true;
+      if (quaggaRef.current) {
+        try { quaggaRef.current.stop(); } catch { /* ignore */ }
+        quaggaRef.current = null;
       }
     };
   }, [scanning, handleBarcode]);
@@ -157,11 +154,9 @@ export default function KioskPage() {
         {scanning && (
           <>
             <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border-2 border-[#F5A623]">
-              <video
-                ref={videoRef}
-                className="w-full h-full object-cover"
-                muted
-                playsInline
+              <div
+                ref={containerRef}
+                className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover [&_canvas]:hidden"
               />
               {/* Tarama çerçevesi */}
               <div className="absolute inset-0 pointer-events-none">
