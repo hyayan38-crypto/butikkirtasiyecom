@@ -13,8 +13,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
-    "@zxing/browser": "^0.1.5",
-    "@zxing/library": "^0.21.3",
+    "@ericblade/quagga2": "^1.4.2",
     "bcryptjs": "^3.0.3",
     "fast-xml-parser": "^5.5.9",
     "iyzipay": "^2.0.65",

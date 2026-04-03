@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
-import { BrowserMultiFormatReader } from "@zxing/browser";
-import { NotFoundException } from "@zxing/library";
 
 type ProductResult = {
   name: string;
@@ -24,18 +22,21 @@ type State =
 const RESET_DELAY = 5000; // ms
 
 export default function FiyatGorPage() {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scanningRef = useRef(false);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [state, setState] = useState<State>({ status: "scanning" });
 
   const resetToScanning = useCallback(() => {
     if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    scanningRef.current = false;
     setState({ status: "scanning" });
   }, []);
 
   const handleBarcode = useCallback(
     async (barcode: string) => {
+      if (scanningRef.current) return;
+      scanningRef.current = true;
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
       setState({ status: "loading" });
 
@@ -57,47 +58,45 @@ export default function FiyatGorPage() {
   );
 
   useEffect(() => {
-    const reader = new BrowserMultiFormatReader();
-    readerRef.current = reader;
+    if (!containerRef.current) return;
+
     let stopped = false;
 
-    (async () => {
-      try {
-        const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-        const backCamera =
-          devices.find((d) => /back|rear|environment/i.test(d.label)) ??
-          devices[devices.length - 1];
-        const deviceId = backCamera?.deviceId;
+    import("@ericblade/quagga2").then(({ default: Quagga }) => {
+      if (stopped || !containerRef.current) return;
 
-        if (!videoRef.current) return;
-
-        await reader.decodeFromVideoDevice(
-          deviceId,
-          videoRef.current,
-          (result, err) => {
-            if (stopped) return;
-            if (result) {
-              const text = result.getText();
-              setState((prev) => {
-                if (prev.status === "scanning") {
-                  handleBarcode(text);
-                }
-                return prev;
-              });
-            } else if (err && !(err instanceof NotFoundException)) {
-              console.warn("Barkod okuma hatası:", err);
-            }
+      Quagga.init(
+        {
+          inputStream: {
+            type: "LiveStream",
+            target: containerRef.current,
+            constraints: { facingMode: "environment", width: 640, height: 480 },
+          },
+          decoder: {
+            readers: ["ean_reader", "ean_8_reader", "code_128_reader", "upc_reader"],
+          },
+          locate: true,
+        },
+        (err: unknown) => {
+          if (err) {
+            setState({ status: "error", message: "Kamera açılamadı. İzin verildiğinden emin olun." });
+            return;
           }
-        );
-      } catch (e) {
-        console.error(e);
-        setState({ status: "error", message: "Kamera açılamadı. İzin verildiğinden emin olun." });
-      }
-    })();
+          if (!stopped) Quagga.start();
+        }
+      );
+
+      Quagga.onDetected((result: { codeResult: { code: string | null } }) => {
+        const code = result.codeResult.code;
+        if (code) handleBarcode(code);
+      });
+    });
 
     return () => {
       stopped = true;
-      BrowserMultiFormatReader.releaseAllStreams();
+      import("@ericblade/quagga2").then(({ default: Quagga }) => {
+        Quagga.stop();
+      });
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
   }, [handleBarcode]);
@@ -123,11 +122,9 @@ export default function FiyatGorPage() {
       <div className="flex-1 flex flex-col items-center justify-center w-full px-6 gap-8">
         {/* Kamera */}
         <div className="relative w-full max-w-sm aspect-square rounded-2xl overflow-hidden border-2 border-[#F5A623]">
-          <video
-            ref={videoRef}
-            className="w-full h-full object-cover"
-            muted
-            playsInline
+          <div
+            ref={containerRef}
+            className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover [&_canvas]:hidden"
           />
           {/* Tarama çerçevesi */}
           <div className="absolute inset-0 pointer-events-none">
