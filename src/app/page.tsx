@@ -1,247 +1,226 @@
-﻿"use client";
-
-import { useEffect, useRef, useState, useCallback } from "react";
+import Link from "next/link";
 import Image from "next/image";
-import { ScanBarcode, RotateCcw } from "lucide-react";
+import { ShoppingBag, Truck, RotateCcw, ShieldCheck, ChevronRight } from "lucide-react";
 
-type SearchResult =
-  | { status: "loading" }
-  | { status: "found"; name: string; price: number; stock: number; birim: string }
-  | { status: "notfound" }
-  | { status: "error"; message: string };
+const categories = [
+  { name: "Kalem & Defter", slug: "kalem-defter", emoji: "🖊️", desc: "Tükenmez, kurşun kalem, defter" },
+  { name: "Boya & Sanat", slug: "boya-sanat", emoji: "🎨", desc: "Suluboya, pastel, fırça" },
+  { name: "Okul Çantası", slug: "okul-cantasi", emoji: "🎒", desc: "İlkokul, ortaokul, lise" },
+  { name: "Oyuncak", slug: "oyuncak", emoji: "🧸", desc: "Eğitici, yaratıcı oyuncaklar" },
+  { name: "Kırtasiye", slug: "kirtasiye", emoji: "📌", desc: "Makas, yapıştırıcı, dosya" },
+  { name: "Ofis Malzemeleri", slug: "ofis", emoji: "📎", desc: "Zımba, delgeç, klasör" },
+  { name: "Kitap", slug: "kitap", emoji: "📚", desc: "Hikaye, roman, eğitim kitabı" },
+  { name: "Kampanya", slug: "kampanya", emoji: "🏷️", desc: "İndirimli ürünler" },
+];
 
-const RESET_DELAY = 8000;
+const features = [
+  { icon: Truck, title: "Ücretsiz Kargo", desc: "500₺ ve üzeri siparişlerde" },
+  { icon: RotateCcw, title: "Kolay İade", desc: "14 gün içinde iade garantisi" },
+  { icon: ShieldCheck, title: "Güvenli Ödeme", desc: "SSL şifreli güvenli alışveriş" },
+  { icon: ShoppingBag, title: "Hızlı Teslimat", desc: "Aynı gün kargo imkanı" },
+];
 
-export default function KioskPage() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const quaggaRef = useRef<typeof import("@ericblade/quagga2")["default"] | null>(null);
-  const handledRef = useRef(false);
-  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [scanning, setScanning] = useState(false);
-  const [result, setResult] = useState<SearchResult | null>(null);
-
-  const stopCamera = useCallback(() => {
-    if (quaggaRef.current) {
-      try { quaggaRef.current.stop(); } catch { /* ignore */ }
-      quaggaRef.current = null;
-    }
-  }, []);
-
-  const reset = useCallback(() => {
-    stopCamera();
-    handledRef.current = false;
-    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-    setResult(null);
-    setScanning(false);
-  }, [stopCamera]);
-
-  const handleBarcode = useCallback(
-    async (barcode: string) => {
-      if (handledRef.current) return;
-      handledRef.current = true;
-      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-      stopCamera();
-      setScanning(false);
-      setResult({ status: "loading" });
-
-      try {
-        const res = await fetch(`/api/ekotek/${encodeURIComponent(barcode)}`);
-        if (res.ok) {
-          const data = await res.json();
-          setResult({ status: "found", ...data });
-        } else {
-          setResult({ status: "notfound" });
-        }
-      } catch {
-        setResult({ status: "error", message: "Bağlantı hatası" });
-      }
-
-      resetTimerRef.current = setTimeout(reset, RESET_DELAY);
-    },
-    [stopCamera, reset]
-  );
-
-  useEffect(() => {
-    if (!scanning || !containerRef.current) return;
-
-    handledRef.current = false;
-    let stopped = false;
-
-    import("@ericblade/quagga2").then(({ default: Quagga }) => {
-      if (stopped || !containerRef.current) return;
-      quaggaRef.current = Quagga;
-
-      Quagga.init(
-        {
-          inputStream: {
-            type: "LiveStream",
-            target: containerRef.current,
-            constraints: { facingMode: "environment", width: 1280, height: 720 },
-          },
-          decoder: {
-            readers: ["ean_reader", "ean_8_reader", "code_128_reader", "upc_reader"],
-          },
-          locate: true,
-        },
-        (err: unknown) => {
-          if (err || stopped) {
-            setResult({ status: "error", message: "Kamera açılamadı. Tarayıcı kamera iznini kontrol edin." });
-            setScanning(false);
-            return;
-          }
-          Quagga.start();
-        }
-      );
-
-      Quagga.onDetected((r: { codeResult: { code: string | null } }) => {
-        const code = r.codeResult.code;
-        if (code) handleBarcode(code);
-      });
-    });
-
-    return () => {
-      stopped = true;
-      if (quaggaRef.current) {
-        try { quaggaRef.current.stop(); } catch { /* ignore */ }
-        quaggaRef.current = null;
-      }
-    };
-  }, [scanning, handleBarcode]);
-
-  useEffect(() => {
-    return () => {
-      stopCamera();
-      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-    };
-  }, [stopCamera]);
-
+export default function HomePage() {
   return (
-    <div className="fixed inset-0 bg-[#1C1C1E] flex flex-col items-center overflow-y-auto">
-      {/* Logo */}
-      <div className="pt-8 pb-2 px-6 w-full max-w-sm">
-        <Image
-          src="/logo.jpg"
-          alt="Butik Kırtasiye"
-          width={400}
-          height={100}
-          className="w-full rounded-xl shadow-xl"
-          priority
-        />
-      </div>
-
-      {/* Başlık */}
-      <div className="px-6 py-4 text-center">
-        <h1 className="text-[#F5A623] text-lg font-bold leading-snug tracking-wide uppercase">
-          Butik Kırtasiye Fiyat Gör
-        </h1>
-        <p className="text-white/50 text-sm mt-1">Hoşgeldiniz</p>
-      </div>
-
-      {/* İçerik */}
-      <div className="flex-1 flex flex-col items-center justify-start w-full max-w-sm px-6 pb-10 gap-5">
-        {/* Tarama butonu */}
-        {!scanning && !result && (
-          <button
-            onClick={() => setScanning(true)}
-            className="w-full bg-[#F5A623] text-[#1C1C1E] font-bold py-4 rounded-2xl flex items-center justify-center gap-3 text-base active:scale-95 transition-transform shadow-lg shadow-[#F5A623]/20"
-          >
-            <ScanBarcode className="w-6 h-6" />
-            Barkod Okut
-          </button>
-        )}
-
-        {/* Kamera */}
-        {scanning && (
-          <>
-            <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border-2 border-[#F5A623]">
-              <div
-                ref={containerRef}
-                className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover [&_canvas]:hidden"
-              />
-              {/* Tarama çerçevesi */}
-              <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-5 left-5 w-10 h-10 border-t-4 border-l-4 border-[#F5A623] rounded-tl-lg" />
-                <div className="absolute top-5 right-5 w-10 h-10 border-t-4 border-r-4 border-[#F5A623] rounded-tr-lg" />
-                <div className="absolute bottom-5 left-5 w-10 h-10 border-b-4 border-l-4 border-[#F5A623] rounded-bl-lg" />
-                <div className="absolute bottom-5 right-5 w-10 h-10 border-b-4 border-r-4 border-[#F5A623] rounded-br-lg" />
-                {/* Tarama çizgisi animasyonu */}
-                <div className="absolute left-6 right-6 h-0.5 bg-[#F5A623]/70 animate-scan top-1/2" />
-              </div>
-              <p className="absolute bottom-3 left-0 right-0 text-center text-white/60 text-xs">
-                Barkodu çerçeve içine alın — yaklaşık 15–20 cm uzakta tutun
-              </p>
+    <div className="min-h-screen bg-[#F9F6F0]">
+      {/* Hero Banner */}
+      <section className="relative bg-gradient-to-br from-[#1C1C1E] via-[#2C2C2E] to-[#1C1C1E] overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-10 left-10 w-64 h-64 rounded-full bg-[#F5A623] blur-3xl" />
+          <div className="absolute bottom-10 right-10 w-48 h-48 rounded-full bg-[#F5A623] blur-2xl" />
+        </div>
+        <div className="relative max-w-7xl mx-auto px-4 py-16 md:py-24 flex flex-col md:flex-row items-center gap-10">
+          <div className="flex-1 text-center md:text-left">
+            <span className="inline-block bg-[#F5A623] text-[#1C1C1E] text-xs font-bold px-3 py-1 rounded-full mb-4 uppercase tracking-wide">
+              Yeni Sezon
+            </span>
+            <h1 className="text-3xl md:text-5xl font-bold text-white leading-tight mb-4">
+              Okula Dönüş
+              <br />
+              <span className="text-[#F5A623]">Hazır mısın?</span>
+            </h1>
+            <p className="text-gray-400 text-lg mb-8 max-w-md">
+              Kalemden çantaya, boyadan kitaba — ihtiyacın olan her şey Butik Kırtasiye&apos;de.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
+              <Link
+                href="/urunler"
+                className="bg-[#F5A623] text-[#1C1C1E] font-bold px-8 py-3.5 rounded-xl hover:bg-[#d48f1a] transition-colors inline-flex items-center justify-center gap-2"
+              >
+                Ürünleri Keşfet
+                <ChevronRight className="w-5 h-5" />
+              </Link>
+              <Link
+                href="/kampanya"
+                className="border border-[#F5A623]/40 text-[#F5A623] font-semibold px-8 py-3.5 rounded-xl hover:bg-[#F5A623]/10 transition-colors inline-flex items-center justify-center"
+              >
+                Kampanyalar
+              </Link>
             </div>
-            <button
-              onClick={reset}
-              className="text-white/40 text-sm hover:text-white/60 transition-colors"
+          </div>
+          <div className="flex-shrink-0">
+            <div className="relative w-56 h-56 md:w-72 md:h-72">
+              <div className="absolute inset-0 bg-[#F5A623]/20 rounded-3xl rotate-6" />
+              <div className="absolute inset-0 bg-[#F5A623]/10 rounded-3xl -rotate-3" />
+              <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-2xl border border-[#F5A623]/20">
+                <Image
+                  src="/logo.jpg"
+                  alt="Butik Kırtasiye"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Bar */}
+      <section className="bg-white border-b border-gray-100 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-gray-100">
+            {features.map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="flex items-center gap-3 px-4 py-4">
+                <div className="w-10 h-10 bg-[#F5A623]/10 rounded-xl flex items-center justify-center shrink-0">
+                  <Icon className="w-5 h-5 text-[#F5A623]" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{title}</p>
+                  <p className="text-xs text-gray-500">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Categories */}
+      <section className="max-w-7xl mx-auto px-4 py-12">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">Kategoriler</h2>
+          <Link href="/urunler" className="text-sm text-[#F5A623] hover:underline font-medium flex items-center gap-1">
+            Tümünü Gör <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+          {categories.map((cat) => (
+            <Link
+              key={cat.slug}
+              href={`/kategori/${cat.slug}`}
+              className="group bg-white rounded-2xl p-4 flex flex-col items-center text-center hover:shadow-md hover:-translate-y-0.5 transition-all border border-gray-100"
             >
-              İptal
-            </button>
-          </>
-        )}
+              <span className="text-3xl mb-2">{cat.emoji}</span>
+              <span className="text-xs font-semibold text-gray-700 group-hover:text-[#F5A623] transition-colors leading-tight">
+                {cat.name}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
 
-        {/* Yükleniyor */}
-        {result?.status === "loading" && (
-          <div className="flex flex-col items-center gap-4 py-8">
-            <div className="w-12 h-12 border-4 border-[#F5A623] border-t-transparent rounded-full animate-spin" />
-            <p className="text-white/50">Aranıyor...</p>
-          </div>
-        )}
-
-        {/* Ürün bulundu */}
-        {result?.status === "found" && (
-          <div className="w-full bg-[#2C2C2E] rounded-2xl p-6 flex flex-col gap-3">
-            <p className="text-[#F5A623] text-xs uppercase tracking-widest font-semibold">
-              Ürün Fiyatı
-            </p>
-            <p className="text-white text-lg font-semibold leading-snug">
-              {result.name}
-            </p>
-            <p className="text-[#F5A623] text-5xl font-bold">
-              {result.price.toLocaleString("tr-TR", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}{" "}
-              <span className="text-3xl">₺</span>
-            </p>
-            <p className="text-white/40 text-sm">
-              Stok:{" "}
-              {result.stock > 0
-                ? `${result.stock} ${result.birim}`
-                : "Tükendi"}
-            </p>
-          </div>
-        )}
-
-        {/* Bulunamadı */}
-        {result?.status === "notfound" && (
-          <div className="w-full bg-red-950/50 border border-red-800/60 rounded-2xl p-6 text-center">
-            <p className="text-red-400 text-4xl mb-3">✗</p>
-            <p className="text-white font-semibold text-lg">Ürün bulunamadı</p>
-            <p className="text-white/40 text-sm mt-1">
-              Bu barkod sistemde kayıtlı değil
-            </p>
-          </div>
-        )}
-
-        {/* Hata */}
-        {result?.status === "error" && (
-          <div className="w-full bg-yellow-950/50 border border-yellow-800/60 rounded-2xl p-6 text-center">
-            <p className="text-yellow-400 font-semibold">{result.message}</p>
-          </div>
-        )}
-
-        {/* Yeni tarama butonu */}
-        {result !== null && result.status !== "loading" && (
-          <button
-            onClick={() => setScanning(true)}
-            className="w-full flex items-center justify-center gap-2 bg-[#F5A623] text-[#1C1C1E] font-bold py-3.5 rounded-2xl active:scale-95 transition-transform"
+      {/* Category Cards - Detailed */}
+      <section className="max-w-7xl mx-auto px-4 pb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Large card */}
+          <Link
+            href="/kategori/boya-sanat"
+            className="group relative md:col-span-2 bg-gradient-to-br from-[#1C1C1E] to-[#2C2C2E] rounded-3xl overflow-hidden h-52 flex items-end p-6 hover:shadow-xl transition-shadow"
           >
-            <RotateCcw className="w-5 h-5" />
-            Yeni Tarama
-          </button>
-        )}
-      </div>
+            <div className="absolute inset-0 opacity-20">
+              <div className="absolute top-4 right-4 text-9xl">🎨</div>
+            </div>
+            <div>
+              <span className="text-[#F5A623] text-xs font-bold uppercase tracking-widest">Keşfet</span>
+              <h3 className="text-white text-2xl font-bold mt-1">Sanat & Boya</h3>
+              <p className="text-gray-400 text-sm mt-1">Yaratıcılığınızı keşfedin</p>
+            </div>
+            <ChevronRight className="absolute right-6 bottom-6 w-6 h-6 text-[#F5A623] group-hover:translate-x-1 transition-transform" />
+          </Link>
+
+          {/* Small cards */}
+          <div className="flex flex-col gap-4">
+            <Link
+              href="/kategori/okul-cantasi"
+              className="group relative bg-[#F5A623] rounded-3xl overflow-hidden h-24 flex items-end px-5 py-4 hover:shadow-xl transition-shadow"
+            >
+              <div className="absolute top-2 right-4 text-5xl opacity-30">🎒</div>
+              <div>
+                <h3 className="text-[#1C1C1E] text-lg font-bold">Okul Çantaları</h3>
+              </div>
+              <ChevronRight className="absolute right-4 bottom-4 w-5 h-5 text-[#1C1C1E]/60 group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <Link
+              href="/kategori/oyuncak"
+              className="group relative bg-gradient-to-br from-purple-900 to-purple-800 rounded-3xl overflow-hidden h-24 flex items-end px-5 py-4 hover:shadow-xl transition-shadow"
+            >
+              <div className="absolute top-2 right-4 text-5xl opacity-30">🧸</div>
+              <div>
+                <h3 className="text-white text-lg font-bold">Oyuncaklar</h3>
+              </div>
+              <ChevronRight className="absolute right-4 bottom-4 w-5 h-5 text-white/40 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Yakında - Öne Çıkan Ürünler */}
+      <section className="max-w-7xl mx-auto px-4 pb-12">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">Öne Çıkan Ürünler</h2>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-white rounded-2xl p-4 border border-gray-100 flex flex-col items-center justify-center h-52 text-center gap-3">
+              <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center">
+                <ShoppingBag className="w-8 h-8 text-gray-300" />
+              </div>
+              <div>
+                <p className="text-gray-400 text-sm font-medium">Yakında</p>
+                <p className="text-gray-300 text-xs">Ürünler ekleniyor...</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Promo Banner */}
+      <section className="max-w-7xl mx-auto px-4 pb-12">
+        <div className="bg-gradient-to-r from-[#F5A623] to-[#d48f1a] rounded-3xl p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div>
+            <h3 className="text-2xl md:text-3xl font-bold text-[#1C1C1E] mb-2">
+              500₺ ve üzeri siparişlerde
+            </h3>
+            <p className="text-[#1C1C1E]/70 text-lg font-medium">Ücretsiz Kargo!</p>
+          </div>
+          <Link
+            href="/urunler"
+            className="bg-[#1C1C1E] text-white font-bold px-8 py-3.5 rounded-xl hover:bg-black transition-colors whitespace-nowrap flex items-center gap-2"
+          >
+            Hemen Alışveriş Yap
+            <ChevronRight className="w-5 h-5" />
+          </Link>
+        </div>
+      </section>
+
+      {/* Fiyat Gör Kiosk Link */}
+      <section className="max-w-7xl mx-auto px-4 pb-16">
+        <Link
+          href="/fiyat-gor"
+          className="flex items-center justify-between bg-white border border-[#F5A623]/20 rounded-2xl px-6 py-4 hover:border-[#F5A623]/50 hover:shadow-md transition-all group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-[#F5A623]/10 rounded-xl flex items-center justify-center text-2xl">
+              📷
+            </div>
+            <div>
+              <p className="font-semibold text-gray-800">Barkod ile Fiyat Öğren</p>
+              <p className="text-sm text-gray-500">Kameranızla ürün barkodunu okutun</p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#F5A623] group-hover:translate-x-1 transition-all" />
+        </Link>
+      </section>
     </div>
   );
 }

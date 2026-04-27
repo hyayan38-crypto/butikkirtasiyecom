@@ -3,9 +3,60 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
-import { ShoppingCart, User, Menu, X, Search, ChevronRight } from "lucide-react";
+import { ShoppingCart, User, Menu, X, Search, ChevronRight, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
+
+const categories = [
+  {
+    name: "Kırtasiye",
+    slug: "kirtasiye",
+    emoji: "📌",
+    sub: ["Kalem & Defter", "Makas & Yapıştırıcı", "Dosya & Klasör", "Silgi & Pergel"],
+  },
+  {
+    name: "Boya & Sanat",
+    slug: "boya-sanat",
+    emoji: "🎨",
+    sub: ["Suluboya", "Pastel & Kuru Boya", "Fırça & Paleti", "Resim Kağıdı"],
+  },
+  {
+    name: "Okul Çantası",
+    slug: "okul-cantasi",
+    emoji: "🎒",
+    sub: ["İlkokul Çantası", "Ortaokul Çantası", "Lise Çantası", "Kalemlik"],
+  },
+  {
+    name: "Oyuncak",
+    slug: "oyuncak",
+    emoji: "🧸",
+    sub: ["Eğitici Oyuncak", "Lego & Yapboz", "Peluş", "Masa Oyunları"],
+  },
+  {
+    name: "Kalem & Defter",
+    slug: "kalem-defter",
+    emoji: "🖊️",
+    sub: ["Tükenmez Kalem", "Kurşun Kalem", "Spiralli Defter", "Ajanda"],
+  },
+  {
+    name: "Ofis",
+    slug: "ofis",
+    emoji: "📎",
+    sub: ["Zımba & Delgeç", "Post-it", "Beyaz Tahta", "Hesap Makinesi"],
+  },
+  {
+    name: "Kitap",
+    slug: "kitap",
+    emoji: "📚",
+    sub: ["Hikaye Kitabı", "Boyama Kitabı", "Eğitim Seti", "Sözlük"],
+  },
+  {
+    name: "Kampanya",
+    slug: "kampanya",
+    emoji: "🏷️",
+    sub: ["Haftanın Fırsatları", "Sınırlı Stok", "Yeni Gelenler"],
+  },
+];
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -13,15 +64,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
-  const categories = [
-    { name: "Kalem & Defter", slug: "kalem-defter", emoji: "🖊️" },
-    { name: "Boya & Sanat", slug: "boya-sanat", emoji: "🎨" },
-    { name: "Okul Çantası", slug: "okul-cantasi", emoji: "🎒" },
-    { name: "Oyuncak", slug: "oyuncak", emoji: "🧸" },
-    { name: "Ofis", slug: "ofis", emoji: "📎" },
-    { name: "Kampanya", slug: "kampanya", emoji: "🏷️" },
-  ];
+  const [hoveredCat, setHoveredCat] = useState<string | null>(null);
 
   return (
     <header className="sticky top-0 z-50">
@@ -48,20 +91,41 @@ export default function Navbar() {
             </Link>
 
             {/* Desktop nav */}
-            <nav className="hidden lg:flex items-center gap-5 flex-1 justify-center">
+            <nav className="hidden lg:flex items-center gap-1 flex-1 justify-center relative">
               {categories.map((cat) => (
-                <Link
+                <div
                   key={cat.slug}
-                  href={`/kategori/${cat.slug}`}
-                  className="text-sm text-gray-300 hover:text-[#F5A623] transition-colors whitespace-nowrap"
+                  className="relative"
+                  onMouseEnter={() => setHoveredCat(cat.slug)}
+                  onMouseLeave={() => setHoveredCat(null)}
                 >
-                  {cat.name}
-                </Link>
+                  <Link
+                    href={`/kategori/${cat.slug}`}
+                    className="flex items-center gap-0.5 text-sm text-gray-300 hover:text-[#F5A623] transition-colors whitespace-nowrap px-2.5 py-2"
+                  >
+                    {cat.name}
+                    <ChevronDown className="w-3 h-3 mt-0.5 opacity-50" />
+                  </Link>
+                  {/* Dropdown */}
+                  {hoveredCat === cat.slug && (
+                    <div className="absolute top-full left-0 mt-0.5 bg-[#2C2C2E] border border-[#3C3C3E] shadow-2xl rounded-xl w-48 py-2 z-50">
+                      {cat.sub.map((sub) => (
+                        <Link
+                          key={sub}
+                          href={`/kategori/${cat.slug}`}
+                          className="block px-4 py-2 text-sm text-gray-300 hover:text-[#F5A623] hover:bg-[#3C3C3E] transition-colors"
+                        >
+                          {sub}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
             </nav>
 
             {/* Right icons */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               {/* Search */}
               {searchOpen ? (
                 <form
@@ -153,7 +217,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="lg:hidden bg-[#1C1C1E] border-t border-[#2C2C2E]">
+        <div className="lg:hidden bg-[#1C1C1E] border-t border-[#2C2C2E] max-h-[80vh] overflow-y-auto">
           {/* User section */}
           <div className="px-4 py-3 border-b border-[#2C2C2E]">
             {session ? (
