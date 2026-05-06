@@ -8,12 +8,12 @@ const geist = Geist({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "Butiik Kırtasiye - Okul Malzemeleri & Oyuncak",
-    template: "%s | Butiik Kırtasiye",
+    default: "Butik Kırtasiye - Kırtasiye, Sanat & Oyuncak",
+    template: "%s | Butik Kırtasiye",
   },
   description:
-    "Kırtasiye, okul malzemeleri ve oyuncak kategorilerinde geniş ürün yelpazesi. Hızlı kargo, güvenli ödeme.",
-  keywords: ["kırtasiye", "okul malzemeleri", "kalem", "defter", "oyuncak"],
+    "Butik Kırtasiye — kırtasiye, boya & sanat, okul çantası ve oyuncak. WhatsApp, Instagram veya telefon ile ulaşın.",
+  keywords: ["kırtasiye", "okul malzemeleri", "boya sanat", "oyuncak", "istanbul", "butik kırtasiye"],
 };
 
 export default function RootLayout({
